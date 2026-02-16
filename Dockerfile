@@ -1,11 +1,14 @@
-FROM python:3.11-slim
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.21 AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /app
 COPY . .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /app/fsb -ldflags="-w -s" ./cmd/fsb
 
-ENV PORT=8080
+FROM scratch
+COPY --from=builder /app/fsb /app/fsb
 EXPOSE 8080
-
-CMD ["python3", "-m", "FileStream"]
+ENTRYPOINT ["/app/fsb", "run"]
